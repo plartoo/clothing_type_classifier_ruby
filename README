@@ -1,0 +1,17 @@
+An experiment on implementating a simple word-frequency-based, and Naive-Bayes-based classifiers written in Ruby.
+For further (but brief) explanations and results, please read "Explanations_and_results".
+
+Note: you should have "rake", "rubygems" and a few others ruby stuff required in "lib/dependencies.rb" installed.
+
+Type:
+
+$ rake -T
+to get available rake tasks options.
+
+$ rake -D <rake task name>
+
+for detailed instruction of how to use a particular rake task.
+
+Have fun!
+
+p.s. No guarantee is made on anything related to this code so please use it with your wisdom ( I trust you! ;) ).

@@ -1,0 +1,218 @@
+Explanation of frequency-based and Naive Bayes Classifiers 
+-----------------------------------------------------------
+
+Problem Description
++++++++++++++++++++
+Suppose we have a bunch of example descriptions (of objects or clothings), each mapped to a class (say, a clothing type id or cid) as shown in yaml format below:
+
+	Save Our Wild Life Tee: 
+	- 19
+	Adam Silk halterneck dress: 
+	- 1
+	Crocs Kaela - Lilac/Plum (Women's): 
+	- 10
+
+Given a new description or query (say, "Segal Lace Dress"), we want to know which class (in this case, clothing type id or cid) it belongs to.
+
+* Frequency-based Approach
+  ++++++++++++++++++++++++
+
+  Algorithm
+  **********
+	Step 1: We break down each example/training data into words (approach 1) or word pairs (approach 2) as in:
+		approach 1:: "Save Our Wild Life Tee" to ["save", "our", "wild", "life", "tee"]
+		approach 2:: "Save Our Wild Life Tee" to ["save", "our", "wild", "life", "tee", "save our", "our wild", "wild life", "life tee"]
+
+	Step 2: We build a frequency table out of words/features/attributes created in Step 1 as in following generalized format:
+		{ "word_1" => {cid_1 => count, cid_2 => count},
+		  "word_2" => {cid_2 => count, cid_2 => count, cid_3 => count},
+		  ...
+		}
+		Here, "word_1" and "word_2" may be either one word or two-word-pairs depending on which approach (1 or 2) that we use.
+
+	Step 3: We break down the query into words/word-pairs and using each the frequency table built in Step 2 as reference, we look up the count of each word/feature/attribute in the query.  Say our query is "Segal Lace Dress", we'll get something like:
+		{ "segal" => {DRESS => 2, JEANS => 1, SHOES => 1, BELT => 1, ACCESSORIES => 1, OUTERWEAR => 1},
+		  "lace" => {DRESS => 1, JEANS => 1, SHOES => 4, JEWELRY => 1},
+		  "dress" => {DRESS => 6, SHOES => 3, JEWELRY => 1}
+		}
+
+	Step 4: We calculate the scores for each word/feature/attribute. You may notice that the more diverse a word/feature/attribute's mapping to clothing types (we call it "class-diversity"), the less powerful its "usefulness" in helping us predict the clothing type.  In the table described in Step 3 above, "segal" is less of a useful predictor than "dress" or "lace" because it's mapped to more diverse types of clothing.  Therefore, we tried:
+		scheme 1:: simply add the frequencies per cid.  In the example of Step 3, we'll get
+				score_table_for_query = {DRESS => 9, JEANS => 2, SHOES => 8, JEWELRY => 2, BELT => 1, ACCESSORIES => 1, OUTERWEAR => 1}
+
+		scheme 2:: divide cid counts for each word/feature/attribute by the number of different clothing types they're assigned to before adding them to build the score_table_for_query as in:
+			preliminary_table = { "segal" => {DRESS => 2/6, JEANS => 1/6, SHOES => 1/6, BELT => 1/6, ACCESSORIES => 1/6, OUTERWEAR => 1/6},
+		  "lace" => {DRESS => 1/4, JEANS => 1/4, SHOES => 4/4, JEWELRY => 1/4},
+		  "dress" => {DRESS => 6/3, SHOES => 3/3, JEWELRY => 1/3}
+		}
+			score_table_for_query = {DRESS => (2/6 + 1/4 + 6/3), JEANS => (1/6 + 1/4), SHOES => (1/6 + 4/4 + 3/3), ...}
+
+		scheme 3:: divide cid counts for each word/feature/attributes by the number of total counts of cids they're assigned to before adding them to build the score_table_for_query as in:
+			preliminary_table = { "segal" => {DRESS => 2/7, JEANS => 1/7, SHOES => 1/7, BELT => 1/7, ACCESSORIES => 1/7, OUTERWEAR => 1/7},
+		  "lace" => {DRESS => 1/7, JEANS => 1/7, SHOES => 4/7, JEWELRY => 1/7},
+		  "dress" => {DRESS => 6/10, SHOES => 3/10, JEWELRY => 1/10}
+		}
+			score_table_for_query = {DRESS => (2/7 + 1/7 + 6/10), JEANS => (1/7 + 1/7), SHOES => (1/7 + 4/7 + 3/10), ...}
+
+	Step 5: We sort the score_table_for_query based on the scores and return the cid with the highest score.
+
+  Observations from frequency-based approach
+  ******************************************
+	From experiments, we found that frequency-based approach (fb) yields average accuracies ranging from 79-85% when tested with a training data of ~6MB using five-fold and cross-one-out validations.  The maximum accuracy is achieve when we use Scheme 3 as our scoring scheme.  "approach 1" performs better than "approach 2" even though we haven't implemented the best way to give appropriate weights to single- vs. multiple-word features.  (skip a couple of paragraphs below if you already are aware of differences among scoring schemes 1, 2 and 3).
+
+	Scheme 1 is simple and reasonable;  however, it does not perform as well as Scheme 2 or 3 because it is based on a pure count of cids and therefore, carries bias toward cids with large count values.  For example, say we have a attribute/feature table for query "diesel dress" as below:
+		{ "diesel" => {DRESS => 3, JEANS => 10, BELT => 1},
+		  "dress" => {DRESS => 4, SHOES => 2, JEWELRY => 1},
+		}, which yields the score table of:
+
+		score_table_for_query = {DRESS => 7, JEANS => 10, SHOES => 2, JEWELRY => 1, BELT => 1}
+
+	Not only that "diesel" is a brand and is likely to be mapped to different cids, but majority of Diesel clothing items are JEANS so the final score table bring us to incorrect classification that "diesel dress" is a JEANS.
+
+	Scheme 3 is a bit similar to Scheme 2, and is technically called "normalization" of counts per feature/attribute.  Normalization is a standard procedure of statistics so we opted to use that in our final code (it also performs slightly better than Scheme 2 when tested with a smaller set of training data).  Scheme 3 works well because it can boost the scores of features/attributes which have a huge bias to a particular cid (in other words, when attributes are more descriptive/useful), whereas it can punish those with similar counts across all cids (that is, when attributes are ambiguous/vague).
+
+  Results
+  ********
+	These results are achieved using training file as "classifier/input/clothing_type_examples_orig.yml" (149460 clothing type examples):
+
+	- x_one_out validation (command used: $ time rake run_x_one_out_validation CLASSIFIER=f TRAINING_FILE="./input/clothing_type_examples_orig.yml")
+		approach 1 + scheme 3 => average: 0.856316071189616 (real    3m40.697s)
+		approach 1 + scheme 2 => average: 0.836337481600428 (real    2m53.979s)
+		approach 1 + scheme 1 => average: 0.78409607921852  (real    2m31.127s)
+
+		approach 2 + scheme 3 => average: 0.913020206075204 (real    6m0.575s)
+		approach 2 + scheme 2 => average: 0.849096748293858 (real    5m57.980s)
+		approach 2 + scheme 1 => average: 0.782737856282617 (real    4m29.051s)
+
+
+
+	- five_fold validation (command used: $ time rake run_k_fold_validation CLASSIFIER=f TRAINING_FILE="./input/clothing_type_examples_orig.yml")
+		approach 1 + scheme 3 => average: 0.843724073330657 (real    2m52.794s)
+		approach 1 + scheme 2 => average: 0.834450689147598 (real    2m23.824s)
+		approach 1 + scheme 1 => average: 0.780636959721665 (real    2m5.006s)
+
+		approach 2 + scheme 3 => average: 0.881152147731835 (real    6m46.320s)
+		approach 2 + scheme 2 => average: 0.846828582898434 (real    5m33.900s)
+		approach 2 + scheme 1 => average: 0.778964271376957 (real    3m54.701s)
+
+* Naive-Bayes Approach
+  ++++++++++++++++++++
+  A little bit of Formula/Theory
+  ******************************
+	(I'll use our specific example with clothing type ids here) The posterior probability for a cid given a set of words/attributes/features (a.k.a. an item description) goes like this:
+		  P(cid | w1, w2, w3)
+
+		  P(cid) P(w1, w2, w3,... | cid)
+		= -------------------------------   => (1)
+			P(w1, w2, w3,...)
+
+		In equation (1), P(cid) is called "prior", P(w1, w2, w3,... | cid) is "conditional probability" and P(w1, w2, w3,...) is "evidence". But since P(w1, w2, w3,...) is constant and is independent of class/cid, we can ignore that in our calcuation.
+
+		As for "conditional probability",
+		  P(w1, w2, w3,... | cid)
+		= P(w1 | cid) P(w2,w3.. | cid,w1)
+		= P(w1 | cid) P(w2 | cid,w1) P(w3,w4,... | cid,w1,w2)
+		which is quite hard to calculate.  However, if we make a NAIVE assumption that each word (wi) is conditionally independent of another word (wj), then we're safe to say-
+					P(w2 | cid, w1) = P(w2 | cid)
+					P(w3 | cid, w1, w2) = P(w3 | cid)
+					and so on.
+
+		Therefore, we have simplified the "conditional probability" calculation to just:
+		  P(w1, w2, w3,... | cid)
+		= P(w1 | cid) P(w2 | cid) P(w3 | cid) ...  => (2)
+
+		From (1) and (2), we have 
+		  P(cid | w1, w2, w3) = P(cid) PRODUCT_OF[P(w1 | cid) P(w2 | cid) P(w3 | cid)...]  => (3)
+
+		(3) is the Naive bayes formula that we implement in our code.  To put them in words for a specific class, say for "cid_1":
+
+			 a. P(cid_1 | w1, w2, w3)
+			= Probability of cid_1 given a set of words/features (posterior probability)
+
+			 b. P(cid_1)
+			= Probability of cid_1 without any given information (prior)
+			= count of cid_1 in the whole frequency table / count of ALL classes in the whole frequency table (OR you can simply assign this as "1/number of different types of cid")
+
+			 c. P(w1 | cid_1)
+			= Probability of word_1 given cid_1
+			= conditional probability
+			= the frequency of word/attribute that is assigned as cid_1 / total number of cid_1 in the training data
+
+		In short, Naive Bayes calculation for a class, cid_1, is basically:
+		posterior_probability_of_cid_1	= prior * likelihood
+						= P(cid_1) * [conditional_probability(w1|cid_1) * conditional_probability(w2|cid_1) * ...]			
+
+    Note: in the latest version of Naive Bayes implementation, I didn't use the products of prior and conditional_probabilities
+          to get posterior probability value.  Rather I used MLE (maximum likelihood estimate) approach mentioned in
+          <http://nlp.stanford.edu/IR-book/html/htmledition/naive-bayes-text-classification-1.html#tab:nbtoy>.
+
+          Aside from transforming "product of probabilities" into "sum of log probabilities" and applying "Laplace smoothing",
+          the fundamentals are the same as described above.
+  Algorithm
+  **********
+	Step 1: break down descriptions into words/features (same as Frequency-based approach Step 1.)
+
+	Step 2: similar to Frequency-based approach Step 2, but since Naive Bayes requires more frequency table look up, we modified the data structure a bit for efficiency as shown below:
+		# naive-bayes frequency_table structure
+		# { :attr_to_class:
+		#               {
+		#                 "word_1" => { cid_1 => count, cid_2 => count},
+		#                 "word_2" => { cid_2 => count},
+		#                },
+		#   :class_to_attr:
+		#               {
+		#                 cid_1 => { "word_1" => count, "word_2" => count},
+		#                 cid_2 => { "word_2" => count},
+		#                },
+		#   :class_count:
+		#               {
+		#                	cid_1 => count,
+		#               }
+                #   ### this 'uniq_attrs' container is used for Laplace-smoothing
+		#   :uniq_attrs:
+		#               {
+		#                	"unique_word_1" => count,
+		#                	"unique_word_2" => count,
+		#                	"unique_word_3" => count,
+		#               }
+                #
+		# }
+
+	Step 3: use Naive Bayes to calculate posterior probability values each item description per cid  (see Formula/Theory section above).
+
+	Step 4: label the description with the cid of highest posterior probability
+
+  Results
+  ********
+	These results are achieved using same training file "classifier/input/clothing_type_examples_orig.yml" (149460 clothing type examples):
+
+	=> Pure Naive Bayes (with using maximum conditional probability, instead of product of conditional probabilities, as likelihood value)
+
+	- x_one_out validation (command used: $time rake run_x_one_out_validation CLASSIFIER=n TRAINING_FILE="./input/clothing_type_examples_orig.yml")
+		approach 1 => average: 0.76819215843704 (real    8m50.588s)
+		approach 2 => average: 0.768138632410009 (real    16m18.237s)
+
+	- five_fold validation (command used: $time rake run_k_fold_validation CLASSIFIER=n TRAINING_FILE="./input/clothing_type_examples_orig.yml")
+		approach 1 => average: 0.764652749899639 (real    3m57.722s)
+		approach 2 => average: 0.764612605379366 (real    7m28.162s)
+
+	=> Naive Bayes implemented as MLE with sum_of_log_of_probabilities to avoid floating point underflow
+		approach 1 => average: 0.890418841161515
+		approach 2 => average: 0.887910441259441
+
+Next Steps/Thoughts
++++++++++++++++++++
+
+Combining the approaches that gives the best accuracy performance, we need to determine:
+
+(for frequency-based approach)
+- how to reduce prediction error (especially, false positives); one idea is to find the difference between the scores of the best and the second best cids and determine the risk level on the basis of that
+
+(for both approaches)
+- using multiple-word attributes helps improve the accuracy (not in Naive Bayes though). but we're now giving equal weight to single- and multiple-word attributes.  intuitively, multiple-word attributes should carry a bit more weight than the single-word ones.  one idea is brute-force: to find the best weight by incrementally/systematically changing the weight from a baseline.  the other idea is to collect statistics about how often classification is correctly done by using the score of multiple-word feature, AND the ones where score from a multiple-word feature ends up being second best but could've given a correct classification; the percentage of these two scenarios will give us an insight into how much weight we should set (at least give us a base line and we can start using brute-force search rom there.
+
+- why Naive Bayes (even with MLE) isn't performing as well as frequency-based approach2 (yeah it's not very significant difference but still)?  what are the cases where Naive Bayes couldn't classify (or got it wrong) when frequency-based approach is correct?
+
+(more general thoughts/questions)
+- in Naive Bayes, we're assuming that classes (cids) are mutually exclusive but that's not really the case in reality (e.g., JEANS are subset of CASUAL_PANTS)
+

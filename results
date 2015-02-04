@@ -1,0 +1,68 @@
+fbt (x one out)
+average: 0.798725217216277
+
+nbt (x one out validation)
+average: 0.784628803381529
+
+fbt (five fold x validation)
+average: 0.795256466167936
+
+
+
+nbt (five fold x validation)
+iter:	0 ==> 0.776678184440941
+iter:	1 ==> 0.780468985876749
+iter:	2 ==> 0.785098460196585
+iter:	3 ==> 0.780905095776443
+iter:	4 ==> 0.781542487168305
+======
+average: 0.780938642691804
+
+***************
+Nov 29
+======
+
+fbt
+   -- use just one word per feature
+iter:	0 ==> 0.70414201183432
+iter:	1 ==> 0.715976331360947
+iter:	2 ==> 0.727810650887574
+iter:	3 ==> 0.775147928994083
+iter:	4 ==> 0.680473372781065
+======
+average: 0.720710059171598
+
+- (five fold with clothing_type_examples==36KB)
+  -- include two words pairs as features
+iter:	0 ==> 0.710059171597633
+iter:	1 ==> 0.70414201183432
+iter:	2 ==> 0.72189349112426
+iter:	3 ==> 0.763313609467456
+iter:	4 ==> 0.674556213017751
+======
+average: 0.714792899408284
+
+   -- use size of class-diversity as denominator
+iter:	0 ==> 0.698224852071006
+iter:	1 ==> 0.751479289940828
+iter:	2 ==> 0.710059171597633
+iter:	3 ==> 0.763313609467456
+iter:	4 ==> 0.650887573964497
+======
+average: 0.714792899408284
+
+:::::::
+
+x_one_out
+   -- one word per feature
+average: 0.799054373522459
+   -- included both one and two words per feature
+average: 0.822695035460993
+   -- use size of class-diversity as denominator
+average: 0.74468085106383
+
+**************** 
+phyothiha
+screen -r data_collect
+
+

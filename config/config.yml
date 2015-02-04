@@ -1,0 +1,14 @@
+:phyo:
+  :us:
+    :feed_dir: "./../newfetchers/yaml_feeds/us/"
+    :data_file: "./input/clothing_type_examples"
+    :dept_file: "./../newfetchers/config/common/departments.yml"
+  :uk:
+    :feed_dir: "./../newfetchers/yaml_feeds/uk/"
+    :data_file: "./input/clothing_type_examples"
+    :dept_file: "./../newfetchers/config/common/departments.yml"
+:staging:
+  :us:
+    :feed_dir: "/usr/local/salemail/yaml_feeds/"
+    :data_file: "./input/clothing_type_examples"
+    :dept_file: "/usr/local/fetchers/current/config/common/departments.yml"
